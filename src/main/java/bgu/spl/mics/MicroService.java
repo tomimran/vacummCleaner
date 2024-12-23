@@ -24,6 +24,7 @@ public abstract class MicroService implements Runnable {
     private final String name;
 
 
+
     /**
      * @param name the micro-service name (used mainly for debugging purposes -
      *             does not have to be unique)
