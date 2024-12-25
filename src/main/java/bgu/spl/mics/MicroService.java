@@ -58,7 +58,7 @@ public abstract class MicroService implements Runnable {
      *                 queue.
      */
     protected final <T, E extends Event<T>> void subscribeEvent(Class<E> type, Callback<E> callback) {
-        eventCallbacks.put(type, callback);
+        eventCallbacks.put(type, (Callback<Event<?>>) callback);
         MessageBusImpl.getInstance().subscribeEvent(type, this);
     }
 
@@ -83,7 +83,7 @@ public abstract class MicroService implements Runnable {
      *                 queue.
      */
     protected final <B extends Broadcast> void subscribeBroadcast(Class<B> type, Callback<B> callback) {
-        broadcastCallbacks.put(type, callback);
+        broadcastCallbacks.put(type, (Callback<Broadcast>) callback);
         MessageBusImpl.getInstance().subscribeBroadcast(type, this);
     }
 
@@ -154,8 +154,8 @@ public abstract class MicroService implements Runnable {
      */
     @Override
     public final void run() {
-        initialize();
         MessageBusImpl.getInstance().register(this);
+        initialize();
         while (!terminated) {
             try {
                 Message nextTask = MessageBusImpl.getInstance().awaitMessage(this);
@@ -168,13 +168,18 @@ public abstract class MicroService implements Runnable {
                         }
                     }
                     else if (nextTask instanceof Broadcast) {
-
-                        Callback<? extends Broadcast> broadcastCallback = broadcastCallbacks.get(nextTask.getClass());
+                        Broadcast b = (Broadcast) nextTask;
+                        Callback<Broadcast> broadcastCallback = broadcastCallbacks.get(nextTask.getClass());
+                        if (broadcastCallback != null) {
+                            broadcastCallback.call(b);
+                        }
                     }
 
                 }
             }
-            catch (InterruptedException e) {} //To be realized later, once we understand how to shut down a thread
+            catch (InterruptedException e) {
+                terminate();
+            } //!!! To be realized later, once we understand how to shut down a thread
         }
         MessageBusImpl.getInstance().unregister(this);
     }

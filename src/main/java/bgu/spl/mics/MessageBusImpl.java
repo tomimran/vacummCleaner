@@ -11,9 +11,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * Write your implementation here!
  * Only private fields and methods can be added to this class.
  */
+
 public class MessageBusImpl implements MessageBus {
 
-	private static MessageBusImpl instance; //this is the only instance of MessageBus
+	private static class SingletonHolder {
+		private static final MessageBusImpl INSTANCE = new MessageBusImpl(); //this is the only instance of MessageBus
+	}
+
 	private final ConcurrentHashMap<MicroService, Queue<Message>> serviceQueueMap; //contains the queues of all registered MicroService
 	private final ConcurrentHashMap<Class<? extends Event<?>>, Queue<MicroService>> eventQueueMap; //contains queue of the registered MicroServices for each type of event
 	private final ConcurrentHashMap<Class<? extends Broadcast>, List<MicroService>> broadcastListMap; //contains list of the registered MicroService for each type of broadcast
@@ -28,15 +32,7 @@ public class MessageBusImpl implements MessageBus {
 	}
 
 	public static MessageBusImpl getInstance() { //returns the only instance of MessageBus
-		if (instance != null) {
-			return instance;
-		}
-		synchronized (MessageBusImpl.class) {
-			if (instance != null) {
-				instance = new MessageBusImpl();
-			}
-		}
-		return instance;
+		return SingletonHolder.INSTANCE;
 	}
 
 	@Override
@@ -75,7 +71,6 @@ public class MessageBusImpl implements MessageBus {
 	@Override
 	public <T> Future<T> sendEvent(Event<T> e) { //we should use synchronize here
 		//potential issue: assigning event to unregistered MicroService
-		boolean completed = false;
 		Queue<MicroService> q = eventQueueMap.get(e.getClass());
 		if (q != null) {
 			synchronized (q) {
@@ -104,7 +99,6 @@ public class MessageBusImpl implements MessageBus {
 
 	@Override
 	public void unregister(MicroService m) { //didnt complete yet
-		synchronized (m){}
 		for (Queue<MicroService> q : eventQueueMap.values()) {
 			synchronized (q) {
 				q.remove(m);
