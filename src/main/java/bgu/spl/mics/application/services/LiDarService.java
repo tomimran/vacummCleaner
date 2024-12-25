@@ -21,6 +21,7 @@ public class LiDarService extends MicroService {
     private LiDarWorkerTracker tracker;
     private int clock;
     private DetectObjectsEvent toProcess;
+    private int check;
     /**
      * Constructor for LiDarService.
      *
