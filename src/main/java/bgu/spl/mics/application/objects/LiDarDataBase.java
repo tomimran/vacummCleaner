@@ -14,8 +14,12 @@ import java.util.List;
  */
 public class LiDarDataBase {
     private List<StampedCloudPoints> cloudPoints;
+    private static String filePath = "";
     private static boolean initialized = false;
-    private static LiDarDataBase instance;
+
+    private static class LiDarDataBaseHolder {
+        private final static LiDarDataBase INSTANCE = new LiDarDataBase(filePath);
+    }
     /**
      * Returns the singleton instance of LiDarDataBase.
      *
@@ -23,19 +27,12 @@ public class LiDarDataBase {
      * @return The singleton instance of LiDarDataBase.
      */
     public static LiDarDataBase getInstance(String filePath) {
-        if (instance == null) {
-            synchronized (LiDarDataBase.class) {
-                if (!initialized) {
-                    initialized = true;
-                    instance = new LiDarDataBase(filePath);
-                }
-            }
-        }
-        return instance;
+        LiDarDataBase.filePath = filePath;
+        return LiDarDataBaseHolder.INSTANCE;
     }
 
     public static LiDarDataBase getInstance() {
-        return instance;
+        return LiDarDataBaseHolder.INSTANCE;
     }
 
     private LiDarDataBase(String filePath) {

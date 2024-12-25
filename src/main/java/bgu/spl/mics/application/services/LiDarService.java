@@ -1,6 +1,7 @@
 package bgu.spl.mics.application.services;
 
 import bgu.spl.mics.Broadcast;
+import bgu.spl.mics.Event;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.messages.*;
 import bgu.spl.mics.application.objects.*;
@@ -20,8 +21,7 @@ public class LiDarService extends MicroService {
 
     private LiDarWorkerTracker tracker;
     private int clock;
-    private DetectObjectsEvent toProcess;
-    private int check;
+    private TrackedObjectsEvent toProcess;
     /**
      * Constructor for LiDarService.
      *
@@ -40,25 +40,21 @@ public class LiDarService extends MicroService {
      */
     @Override
     protected void initialize() {
-        subscribeBroadcast(TickBroadcast.class, (broadcast) -> {clock = broadcast.getTick();});
-        subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {});
-        subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {terminate();});
-        subscribeEvent(DetectObjectsEvent.class, (broadcast) -> {toProcess = broadcast;});
-    }
-
-    private void process (DetectObjectsEvent event) {
-
-    }
-
-    /*private void receiveTick (TickBroadcast broadcast) {//should implement this as update last detected in the worker class
-        if (toProcess != null) {
-            List<TrackedObject> updatedList = new ArrayList<>();
-            if (toProcess.getTime() + tracker.getFrequency() >= broadcast.getTick()) {
-                for (DetectedObject detectedObject : toProcess.getDetectedObjects()) {
-                    StampedCloudPoints cloudPoints = LiDarDataBase.getInstance().getCloudPoint(detectedObject.getId(), toProcess.getTime());
-                    updatedList.add(new TrackedObject(detectedObject.getId(), toProcess.getTime(), detectedObject.getDescription(), cloudPoints.getCloudPoints()))
-                }
+        subscribeBroadcast(TickBroadcast.class, (broadcast) -> {
+            List<TrackedObject> trackedObjects = tracker.getTrackedObjects(broadcast.getTick());
+            if (!trackedObjects.isEmpty()) {
+                StatisticalFolder.getInstance().addTrackedObjects(trackedObjects.size());
+                sendEvent(new TrackedObjectsEvent(trackedObjects, trackedObjects.getFirst().getTime()));
             }
-        }
-    }*/
+        });
+        subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {
+
+        });
+        subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {
+            terminate();
+        });
+        subscribeEvent(DetectObjectsEvent.class, (event) -> {
+            tracker.updateTrackedObjects(event.getTime(), event.getDetectedObjects());
+        });
+    }
 }

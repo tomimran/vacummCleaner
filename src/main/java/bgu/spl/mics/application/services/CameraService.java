@@ -8,6 +8,7 @@ import bgu.spl.mics.application.messages.TickBroadcast;
 import bgu.spl.mics.application.objects.Camera;
 import bgu.spl.mics.MicroService;
 import bgu.spl.mics.application.objects.DetectedObject;
+import bgu.spl.mics.application.objects.StatisticalFolder;
 
 import java.util.List;
 
@@ -38,17 +39,19 @@ public class CameraService extends MicroService {
      */
     @Override
     protected void initialize() {
-        subscribeBroadcast(TickBroadcast.class, (broadcast) -> {receiveTick(broadcast);});
-        subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {});
-        subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {terminate();});
-    }
+        subscribeBroadcast(TickBroadcast.class, (broadcast) -> {
+            int tick = broadcast.getTick();
+            List<DetectedObject> detectedObjects = camera.detect(tick);
+            if (detectedObjects != null) {
+                StatisticalFolder.getInstance().addDetectedObjects(detectedObjects.size());
+                sendEvent(new DetectObjectsEvent(detectedObjects, tick));
+            }
+        });
+        subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {
 
-    private void receiveTick (TickBroadcast broadcast) {
-        int tick = broadcast.getTick();
-        List<DetectedObject> detectedObjects = camera.detect(tick);
-        if (detectedObjects != null) {
-            sendEvent(new DetectObjectsEvent(detectedObjects, tick));
-        }
+        });
+        subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {
+            terminate();
+        });
     }
-
 }
