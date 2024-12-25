@@ -1,5 +1,7 @@
 package bgu.spl.mics;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * The MicroService is an abstract class that any micro-service in the system
  * must extend. The abstract MicroService class is responsible to get and
@@ -14,7 +16,7 @@ package bgu.spl.mics;
  * message-queue (see {@link MessageBus#register(bgu.spl.mics.MicroService)}
  * method). The abstract MicroService stores this callback together with the
  * type of the message is related to.
- * 
+ *
  * Only private fields and methods may be added to this class.
  * <p>
  */
@@ -22,7 +24,8 @@ public abstract class MicroService implements Runnable {
 
     private boolean terminated = false;
     private final String name;
-
+    private final ConcurrentHashMap<Class<? extends Message>, Callback<Event<?>>> eventCallbacks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Class<? extends Message>, Callback<Broadcast>> broadcastCallbacks = new ConcurrentHashMap<>();
 
 
     /**
@@ -55,7 +58,8 @@ public abstract class MicroService implements Runnable {
      *                 queue.
      */
     protected final <T, E extends Event<T>> void subscribeEvent(Class<E> type, Callback<E> callback) {
-        //TODO: implement this.
+        eventCallbacks.put(type, (Callback<Event<?>>) callback);
+        MessageBusImpl.getInstance().subscribeEvent(type, this);
     }
 
     /**
@@ -79,7 +83,8 @@ public abstract class MicroService implements Runnable {
      *                 queue.
      */
     protected final <B extends Broadcast> void subscribeBroadcast(Class<B> type, Callback<B> callback) {
-        //TODO: implement this.
+        broadcastCallbacks.put(type, (Callback<Broadcast>) callback);
+        MessageBusImpl.getInstance().subscribeBroadcast(type, this);
     }
 
     /**
@@ -95,8 +100,7 @@ public abstract class MicroService implements Runnable {
      * 	       			null in case no micro-service has subscribed to {@code e.getClass()}.
      */
     protected final <T> Future<T> sendEvent(Event<T> e) {
-        //TODO: implement this.
-        return null; //TODO: delete this line :)
+        return MessageBusImpl.getInstance().sendEvent(e);
     }
 
     /**
@@ -106,7 +110,7 @@ public abstract class MicroService implements Runnable {
      * @param b The broadcast message to send
      */
     protected final void sendBroadcast(Broadcast b) {
-        //TODO: implement this.
+        MessageBusImpl.getInstance().sendBroadcast(b);
     }
 
     /**
@@ -120,13 +124,13 @@ public abstract class MicroService implements Runnable {
      *               {@code e}.
      */
     protected final <T> void complete(Event<T> e, T result) {
-        //TODO: implement this.
+        MessageBusImpl.getInstance().complete(e, result);
     }
 
     /**
      * this method is called once when the event loop starts.
      */
-    protected abstract void initialize();
+    protected abstract void initialize(); //Implemented seperately at each extending class
 
     /**
      * Signals the event loop that it must terminate after handling the current
@@ -150,10 +154,34 @@ public abstract class MicroService implements Runnable {
      */
     @Override
     public final void run() {
+        MessageBusImpl.getInstance().register(this);
         initialize();
         while (!terminated) {
-            System.out.println("NOT IMPLEMENTED!!!"); //TODO: you should delete this line :)
+            try {
+                Message nextTask = MessageBusImpl.getInstance().awaitMessage(this);
+                if (nextTask != null) {
+                    if (nextTask instanceof Event) {
+                        Event<?> e = (Event<?>) nextTask;
+                        Callback<Event<?>> eventCallback = eventCallbacks.get(nextTask.getClass());
+                        if (eventCallback != null) {
+                            eventCallback.call(e);
+                        }
+                    }
+                    else if (nextTask instanceof Broadcast) {
+                        Broadcast b = (Broadcast) nextTask;
+                        Callback<Broadcast> broadcastCallback = broadcastCallbacks.get(nextTask.getClass());
+                        if (broadcastCallback != null) {
+                            broadcastCallback.call(b);
+                        }
+                    }
+
+                }
+            }
+            catch (InterruptedException e) {
+                terminate();
+            } //!!! To be realized later, once we understand how to shut down a thread
         }
+        MessageBusImpl.getInstance().unregister(this);
     }
 
 }
