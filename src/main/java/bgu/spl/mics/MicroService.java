@@ -171,7 +171,7 @@ public abstract class MicroService implements Runnable {
 
                         Callback<? extends Broadcast> broadcastCallback = broadcastCallbacks.get(nextTask.getClass());
                     }
-sdfasdf
+
                 }
             }
             catch (InterruptedException e) {} //To be realized later, once we understand how to shut down a thread
