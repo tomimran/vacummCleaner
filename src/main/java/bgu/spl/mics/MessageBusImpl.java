@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * The {@link MessageBusImpl class is the implementation of the MessageBus interface.
@@ -18,7 +19,7 @@ public class MessageBusImpl implements MessageBus {
 		private static final MessageBusImpl INSTANCE = new MessageBusImpl(); //this is the only instance of MessageBus
 	}
 
-	private final ConcurrentHashMap<MicroService, Queue<Message>> serviceQueueMap; //contains the queues of all registered MicroService
+	private final ConcurrentHashMap<MicroService, LinkedBlockingQueue<Message>> serviceQueueMap; //contains the queues of all registered MicroService
 	private final ConcurrentHashMap<Class<? extends Event<?>>, Queue<MicroService>> eventQueueMap; //contains queue of the registered MicroServices for each type of event
 	private final ConcurrentHashMap<Class<? extends Broadcast>, List<MicroService>> broadcastListMap; //contains list of the registered MicroService for each type of broadcast
 	private final ConcurrentHashMap<Event<?>, Future<?>> ongoingEvents; //contains the events that already assigned to specific MicroService but haven't completed yet
@@ -93,42 +94,24 @@ public class MessageBusImpl implements MessageBus {
 	@Override
 	public void register(MicroService m) {
 		if (m != null) {
-			serviceQueueMap.putIfAbsent(m, new ConcurrentLinkedQueue<>());
+			serviceQueueMap.putIfAbsent(m, new LinkedBlockingQueue<>());
 		}
 	}
 
 	@Override
 	public void unregister(MicroService m) { //didnt complete yet
 		for (Queue<MicroService> q : eventQueueMap.values()) {
-			synchronized (q) {
-				q.remove(m);
-			}
+			q.remove(m);
 		}
 		for (List<MicroService> q : broadcastListMap.values()) {
 			q.remove(m);
 		}
-		Queue<Message> uncompletedEvents = serviceQueueMap.remove(m);
-		for (Message message : uncompletedEvents) {
-			if (message instanceof Event<?>) {
-				sendEvent((Event<?>)message);
-			}
-		}
+		serviceQueueMap.remove(m);
 	}
 
 	@Override
 	public Message awaitMessage(MicroService m) throws InterruptedException {
-		Queue<Message> q = serviceQueueMap.get(m);
-		synchronized (q) {
-			while (q.isEmpty()) {
-				try {
-					q.wait();
-				}
-				catch (InterruptedException e) {
-					return null;
-				}
-			}
-			notifyAll();
-			return q.poll();
-		}
+		LinkedBlockingQueue<Message> q = serviceQueueMap.get(m);
+		return q.take();
 	}
 }

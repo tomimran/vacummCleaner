@@ -43,12 +43,23 @@ public class CameraService extends MicroService {
             int tick = broadcast.getTick();
             List<DetectedObject> detectedObjects = camera.detect(tick);
             if (detectedObjects != null) {
+                for (DetectedObject detectedObject : detectedObjects) {
+                    if (detectedObject.getId().equals("ERROR")) {
+                        camera.setError();
+                        sendBroadcast(new CrashedBroadcast("Camera", detectedObject.getDescription()));
+                        terminate();
+                    }
+                }
                 StatisticalFolder.getInstance().addDetectedObjects(detectedObjects.size());
                 sendEvent(new DetectObjectsEvent(detectedObjects, tick));
             }
         });
         subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {
-
+            if (broadcast.getType().equals(TimeService.class) | broadcast.getType().equals(FusionSlamService.class)) {
+                sendBroadcast(new TerminatedBroadcast(this.getClass()));
+                camera.turnDown();
+                terminate();
+            }
         });
         subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {
             terminate();

@@ -31,5 +31,15 @@ public class Camera {
         return null;
     }
 
+    public void turnDown() {
+        this.status = STATUS.DOWN;
+    }
 
+    public void turnUp() {
+        this.status = STATUS.UP;
+    }
+
+    public void setError() {
+        this.status = STATUS.ERROR;
+    }
 }

@@ -1,5 +1,7 @@
 package bgu.spl.mics.application.objects;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Holds statistical information about the system's operation.
  * This class aggregates metrics such as the runtime of the system,
@@ -11,24 +13,26 @@ public class StatisticalFolder {
         private static final StatisticalFolder INSTANCE = new StatisticalFolder();
     }
 
-    private int systemRuntime;
-    private int numDetectedObjects;
-    private int numTrackedObjects;
-    private int numLandmarks;
+    private AtomicInteger systemRuntime;
+    private AtomicInteger numDetectedObjects;
+    private AtomicInteger numTrackedObjects;
+    private AtomicInteger numLandmarks;
+    private AtomicInteger activeServices;
 
     public static StatisticalFolder getInstance() {
         return SingletonHolder.INSTANCE;
     }
 
     private StatisticalFolder() {
-        systemRuntime = 0;
-        numDetectedObjects = 0;
-        numTrackedObjects = 0;
-        numLandmarks = 0;
+        systemRuntime = new AtomicInteger(0);
+        numDetectedObjects = new AtomicInteger(0);
+        numTrackedObjects = new AtomicInteger(0);
+        numLandmarks = new AtomicInteger(0);
+        activeServices = new AtomicInteger(0);
     }
 
     public void tick() {
-        systemRuntime += 1;
+        systemRuntime.incrementAndGet();
     }
 
     public void addDetectedObjects(int num) {
@@ -36,10 +40,10 @@ public class StatisticalFolder {
     }
 
     public void addTrackedObjects(int num) {
-        numTrackedObjects += num;
+        numTrackedObjects.addAndGet(num);
     }
 
     public void addLandmark() {
-        numLandmarks += 1;
+        numLandmarks.incrementAndGet();
     }
 }

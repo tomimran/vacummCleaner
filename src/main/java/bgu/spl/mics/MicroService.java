@@ -1,5 +1,7 @@
 package bgu.spl.mics;
 
+import bgu.spl.mics.application.objects.StatisticalFolder;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -34,6 +36,7 @@ public abstract class MicroService implements Runnable {
      */
     public MicroService(String name) {
         this.name = name;
+        StatisticalFolder.getInstance().incrementActiveServices();
     }
 
     /**

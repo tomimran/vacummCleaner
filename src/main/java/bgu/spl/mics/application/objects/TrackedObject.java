@@ -23,6 +23,7 @@ public class TrackedObject {
     public int getTime() {
         return time;
     }
+
     public String getDescription() {
         return description;
     }
@@ -30,8 +31,8 @@ public class TrackedObject {
         return coordinates;
     }
 
-
     public String getId() {
         return id;
     }
+
 }

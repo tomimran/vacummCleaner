@@ -20,8 +20,6 @@ import java.util.List;
 public class LiDarService extends MicroService {
 
     private LiDarWorkerTracker tracker;
-    private int clock;
-    private TrackedObjectsEvent toProcess;
     /**
      * Constructor for LiDarService.
      *
@@ -30,7 +28,6 @@ public class LiDarService extends MicroService {
     public LiDarService(LiDarWorkerTracker LiDarWorkerTracker) {
         super("LiDar Service");
         tracker = LiDarWorkerTracker;
-        toProcess = null;
     }
 
     /**
@@ -43,12 +40,23 @@ public class LiDarService extends MicroService {
         subscribeBroadcast(TickBroadcast.class, (broadcast) -> {
             List<TrackedObject> trackedObjects = tracker.getTrackedObjects(broadcast.getTick());
             if (!trackedObjects.isEmpty()) {
+                for (TrackedObject trackedObject : trackedObjects) {
+                    if (trackedObject.getId().equals("ERROR")) {
+                        tracker.setError();
+                        sendBroadcast(new CrashedBroadcast("Sensor " + tracker.getId(), trackedObject.getDescription()));
+                        terminate();
+                    }
+                }
                 StatisticalFolder.getInstance().addTrackedObjects(trackedObjects.size());
                 sendEvent(new TrackedObjectsEvent(trackedObjects, trackedObjects.getFirst().getTime()));
             }
         });
         subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {
-
+            if (broadcast.getType().equals(TimeService.class) | broadcast.getType().equals(FusionSlamService.class)) {
+                sendBroadcast(new TerminatedBroadcast(this.getClass()));
+                tracker.turnDown();
+                terminate();
+            }
         });
         subscribeBroadcast(CrashedBroadcast.class, (broadcast) -> {
             terminate();
