@@ -1,12 +1,8 @@
 package bgu.spl.mics.application;
 
-import bgu.spl.mics.application.objects.Camera;
-import bgu.spl.mics.application.objects.LiDarDataBase;
-import bgu.spl.mics.application.objects.LiDarWorkerTracker;
-import bgu.spl.mics.application.objects.StampedCloudPoints;
+import bgu.spl.mics.application.objects.*;
 
-import bgu.spl.mics.application.services.CameraService;
-import bgu.spl.mics.application.services.LiDarService;
+import bgu.spl.mics.application.services.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.FileReader;
@@ -59,21 +55,29 @@ public class GurionRockRunner {
         int TickTime = config.TickTime;
         int Duration = config.Duration;
 
+        System.out.println("init finish");
         /// Initialization of the system:
         for (Camera camera : cameras) {
             CameraService cameraService = new CameraService(camera);
-            cameraService.run();
+            Thread thread = new Thread(cameraService);
+            thread.start();
         }
+        System.out.println("cameras started");
         for (LiDarWorkerTracker lidarWorkerTracker : lidarWorkerTrackers) {
             LiDarService lidarService = new LiDarService(lidarWorkerTracker);
-            lidarService.run();
+            Thread thread = new Thread(lidarService);
+            thread.start();
         }
+        FusionSlamService fusionSlamService = new FusionSlamService(FusionSlam.getInstance());
+        Thread thread = new Thread(fusionSlamService);
+        thread.start();
         LiDarDataBase.getInstance(lidarDataPath);
-
-
-
-        // TODO: Initialize system components and services.
-        // TODO: Start the simulation.
+        PoseService poseService = new PoseService(new GPSIMU(poseJsonFile));
+        Thread thread2 = new Thread(poseService);
+        thread2.start();
+        TimeService timeService = new TimeService(TickTime, Duration);
+        Thread thread3 = new Thread(timeService);
+        thread3.start(); //here the simulation starts
     }
 
     private class Configuration {
