@@ -48,7 +48,7 @@ public class LiDarService extends MicroService {
                     }
                 }
                 StatisticalFolder.getInstance().addTrackedObjects(trackedObjects.size());
-                sendEvent(new TrackedObjectsEvent(trackedObjects, trackedObjects.getFirst().getTime()));
+                sendEvent(new TrackedObjectsEvent(trackedObjects, trackedObjects.get(0).getTime()));
             }
         });
         subscribeBroadcast(TerminatedBroadcast.class, (broadcast) -> {

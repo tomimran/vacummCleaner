@@ -1,5 +1,8 @@
 package bgu.spl.mics.application.objects;
 
+import bgu.spl.mics.application.CameraData;
+import com.google.gson.annotations.SerializedName;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,14 +15,17 @@ public class Camera {
 
     private final int id;
     private int frequency;
+    @SerializedName("camera_key")
+    private String cameraKey;
     private STATUS status;
     private List<StampedDetectedObjects> detectedObjectsList;
 
-    public Camera(int id, int frequency) {
+    public Camera(int id, int frequency, String camera_data_path, String camera_key) {
         this.id = id;
         this.frequency = frequency;
+        this.cameraKey = camera_key;
         this.status = STATUS.UP;
-        this.detectedObjectsList = new ArrayList<>();
+        this.detectedObjectsList = new CameraData(camera_data_path).getStampedDetectedObjects(camera_key);
     }
 
     public List<DetectedObject> detect(int time) {
@@ -41,5 +47,13 @@ public class Camera {
 
     public void setError() {
         this.status = STATUS.ERROR;
+    }
+
+    public String getCameraKey() {
+        return cameraKey;
+    }
+
+    public int getId() {
+        return id;
     }
 }

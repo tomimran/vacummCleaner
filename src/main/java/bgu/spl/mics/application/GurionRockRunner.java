@@ -1,8 +1,12 @@
 package bgu.spl.mics.application;
 
+import bgu.spl.mics.application.objects.Camera;
 import bgu.spl.mics.application.objects.LiDarDataBase;
+import bgu.spl.mics.application.objects.LiDarWorkerTracker;
 import bgu.spl.mics.application.objects.StampedCloudPoints;
 
+import bgu.spl.mics.application.services.CameraService;
+import bgu.spl.mics.application.services.LiDarService;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.io.FileReader;
@@ -26,10 +30,89 @@ public class GurionRockRunner {
      * @param args Command-line arguments. The first argument is expected to be the path to the configuration file.
      */
     public static void main(String[] args) {
-        System.out.println("Hello World!");
-        // REMEMBER: Test that the gson parsing works properly
-        // TODO: Parse configuration file.
+
+        /// Parse of the config files:
+        /*if (args.length < 1) {
+            System.out.println("Error: Path to the JSON file must be provided as a command-line argument.");
+            return;
+        }*/
+
+        //String jsonFilePath = args[0];
+        String jsonFilePath = "example input/configuration_file.json"; //should receive this from args
+        Configuration config = null;
+        try {
+            // Initialize Gson
+            Gson gson = new Gson();
+
+            // Parse JSON file into Configuration object
+            FileReader reader = new FileReader(jsonFilePath);
+            config = gson.fromJson(reader, Configuration.class);
+            reader.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        List<Camera> cameras = config.Cameras;
+        List<LiDarWorkerTracker> lidarWorkerTrackers = config.Lidars.LidarConfigurations;
+        String lidarDataPath = config.Lidars.lidars_data_path;
+        String poseJsonFile = config.poseJsonFile;
+        int TickTime = config.TickTime;
+        int Duration = config.Duration;
+
+        /// Initialization of the system:
+        for (Camera camera : cameras) {
+            CameraService cameraService = new CameraService(camera);
+            cameraService.run();
+        }
+        for (LiDarWorkerTracker lidarWorkerTracker : lidarWorkerTrackers) {
+            LiDarService lidarService = new LiDarService(lidarWorkerTracker);
+            lidarService.run();
+        }
+        LiDarDataBase.getInstance(lidarDataPath);
+
+
+
         // TODO: Initialize system components and services.
         // TODO: Start the simulation.
+    }
+
+    private class Configuration {
+        private List<Camera> Cameras;
+        private Lidars Lidars;
+        private String poseJsonFile;
+        private int TickTime;
+        private int Duration;
+
+        private List<Camera> getCameras() {
+            return Cameras;
+        }
+
+        private Lidars getLidars() {
+            return Lidars;
+        }
+
+        private String getPoseJsonFile() {
+            return poseJsonFile;
+        }
+
+        private int getTickTime() {
+            return TickTime;
+        }
+
+        private int getDuration() {
+            return Duration;
+        }
+    }
+
+    private class Lidars {
+        private List<LiDarWorkerTracker> LidarConfigurations;
+        private String lidars_data_path;
+
+        private List<LiDarWorkerTracker> getLidarWorkerTrackers() {
+            return LidarConfigurations;
+        }
+        private String getLidarDataPath() {
+            return lidars_data_path;
+        }
     }
 }
